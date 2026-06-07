@@ -1,2 +1,6 @@
-# Web-420
-Coursework for WEB 420
+# Web 420 RESTful APIs
+
+## Contributors
+
+- Richard Krasso
+- Jennifer Snyder
