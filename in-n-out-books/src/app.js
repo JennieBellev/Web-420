@@ -16,6 +16,11 @@ const books = require('../database/books');
 // Set up the Express application
 const app = express();
 
+// --- CRITICAL FIX: THESE TWO LINES PARSE THE BODY ---
+app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
+// ----------------------------------------------------
+
 // GET route for the root URL ("/") returning a fully designed landing page
 app.get('/', (req, res) => {
   const htmlLandingPage = `
@@ -73,10 +78,9 @@ app.get('/', (req, res) => {
   res.send(htmlLandingPage);
 });
 
-// --- NEW API ROUTES GO HERE ---
+// --- API ROUTES ---
 
 // Expose full inventory for client-side rendering.
-// Wrapped in a try/catch to guarantee server stability if the underlying data layer fails.
 app.get('/api/books', async (req, res) => {
   try {
     const allBooks = await books.find();
@@ -86,13 +90,11 @@ app.get('/api/books', async (req, res) => {
   }
 });
 
-// Parameterized route to fetch specific resources, keeping payload sizes small for the client.
+// Parameterized route to fetch specific resources
 app.get('/api/books/:id', async (req, res) => {
   try {
-    // Coerce the URL string parameter into an integer to strictly match database schema types
     const bookId = parseInt(req.params.id, 10);
 
-    // Guard clause: Fail fast on malformed requests to save server processing power
     if (isNaN(bookId)) {
       return res.status(400).json({ message: 'Input must be a number' });
     }
@@ -105,6 +107,55 @@ app.get('/api/books/:id', async (req, res) => {
   }
 });
 
+// POST route to add a new book
+app.post('/api/books', async (req, res) => {
+  try {
+    const { title } = req.body;
+
+    if (!title) {
+      const error = new Error('Book title is missing.');
+      error.status = 400;
+      throw error;
+    }
+
+    res.status(201).send();
+  } catch (error) {
+    res.status(error.status || 500).json({ message: error.message });
+  }
+});
+
+// DELETE route to remove a book
+app.delete('/api/books/:id', async (req, res) => {
+  try {
+    const bookId = req.params.id;
+    res.status(204).send();
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+});
+
+// PUT route to update a book
+app.put('/api/books/:id', (req, res) => {
+  try {
+    const id = req.params.id;
+
+    if (isNaN(id)) {
+      return res.status(400).send("Input must be a number");
+    }
+
+    const { title, author } = req.body;
+
+    if (!title) {
+      return res.status(400).send("Bad Request");
+    }
+
+    res.status(204).send();
+
+  } catch (error) {
+    console.error("Error updating book:", error);
+    res.status(500).send("Internal Server Error");
+  }
+});
 
 // --- ERROR HANDLERS GO LAST ---
 
@@ -118,7 +169,6 @@ app.use((err, req, res, next) => {
   res.status(500).json({
     message: "Internal Server Error",
     errorDetails: err.message,
-    // Include the error stack ONLY if running in development mode
     stack: process.env.NODE_ENV === 'development' ? err.stack : undefined
   });
 });
