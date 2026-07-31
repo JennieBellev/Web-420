@@ -4,14 +4,18 @@
  * File Name: app.js
  * Description: Initial server setup for the In-N-Out-Books API.
  * Includes an Express application setup, a fully designed HTML landing page route,
- * API data routes, and error handling middleware.
+ * API data routes, user authentication, and error handling middleware.
  */
 
 // Require the Express module
 const express = require('express');
 
-// Mock database dependency required for testing data retrieval
+// Mock database dependencies required for testing data retrieval
 const books = require('../database/books');
+const users = require('../database/users'); // Added for Hands-On 6.1
+
+// Require bcryptjs for password comparison
+const bcrypt = require('bcryptjs'); // Added for Hands-On 6.1
 
 // Set up the Express application
 const app = express();
@@ -154,6 +158,46 @@ app.put('/api/books/:id', (req, res) => {
   } catch (error) {
     console.error("Error updating book:", error);
     res.status(500).send("Internal Server Error");
+  }
+});
+
+// POST route for user login (Restored Hands-On 6.1 Requirement)
+app.post('/api/login', (req, res) => {
+  try {
+    const { email, password } = req.body;
+
+    // Check if email or password is missing
+    if (!email || !password) {
+      const error = new Error('Bad Request');
+      error.status = 400;
+      throw error;
+    }
+
+    // Find the user in the mock database array
+    const user = users.find(u => u.email === email);
+
+    // If user doesn't exist, throw 401 Unauthorized
+    if (!user) {
+      const error = new Error('Unauthorized');
+      error.status = 401;
+      throw error;
+    }
+
+    // Compare the provided password with the hashed password in the database
+    const isValidPassword = bcrypt.compareSync(password, user.password);
+
+    // If passwords don't match, throw 401 Unauthorized
+    if (!isValidPassword) {
+      const error = new Error('Unauthorized');
+      error.status = 401;
+      throw error;
+    }
+
+    // If everything is correct, return success message
+    res.status(200).json({ message: 'Authentication successful' });
+
+  } catch (error) {
+    res.status(error.status || 500).json({ message: error.message });
   }
 });
 
