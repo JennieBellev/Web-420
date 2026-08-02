@@ -218,4 +218,15 @@ app.use((err, req, res, next) => {
 });
 
 // Export the Express application
+// Define the port for Render (process.env.PORT) or local testing (3000)
+const port = process.env.PORT || 3000;
+
+// Start the server (the 'if' statement ensures tests don't hang)
+if (require.main === module) {
+  app.listen(port, () => {
+    console.log(`Server is running on port ${port}`);
+  });
+}
+
+// Export the Express application
 module.exports = app;
